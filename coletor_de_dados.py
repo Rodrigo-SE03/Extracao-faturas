@@ -1,9 +1,9 @@
 import PySimpleGUI as sg
 import os
 from PyPDF2 import PdfReader
-from datetime import date
 import pandas as pd
 import re
+import xlsxwriter
 
 sg.theme('Dark')   
 
@@ -273,6 +273,7 @@ def conferir(precos,preco_total):
         flag_confere = 'CONFERE'
     else:
         flag_confere = 'NÃO CONFERE'
+        print("erro")
     conferir = [preco_calculado,flag_confere]
     return conferir
 
@@ -301,7 +302,9 @@ def definir_valor(texto):
     preco_calculado,flag_confere = conferir(precos,preco_total)
     data = f'{mes}/{ano}'
 
-    valores = [data,demanda_P,demanda,preco_demanda,0,demanda_ex,preco_demanda_ex,demanda_ultrapassagem,preco_demanda_ultrapassagem,consumo_hp,preco_consumo_hp,consumo_hfp,preco_consumo_hfp,bandeiras_tipo,bandeiras,consumo_reativa,preco_reativa,dem_reativa,preco_dem_reativa,ilum,valor_extra,multa,icms,pasep,cofins,preco_total,preco_calculado,flag_confere]
+    maior_que = demanda_P if demanda_P>demanda else demanda
+
+    valores = [data,demanda_P,demanda,preco_demanda,maior_que,demanda_ex,preco_demanda_ex,demanda_ultrapassagem,preco_demanda_ultrapassagem,consumo_hp,preco_consumo_hp,consumo_hfp,preco_consumo_hfp,bandeiras_tipo,bandeiras,consumo_reativa,preco_reativa,dem_reativa,preco_dem_reativa,ilum,valor_extra,multa,icms,pasep,cofins,preco_total,preco_calculado,flag_confere]
     return valores
 
 def format_number(num):
@@ -349,6 +352,14 @@ def inserir_valores(colunas,valores):
         item.append(valores[num])
         num+=1
 
+def cor_bandeira(val):
+    bg_color = '#FFC7CE' if val == "VERMELHA" else '#C6EFCE'
+    color = '#9C0006' if val == "VERMELHA" else '#006100'
+    return f'background-color: {bg_color}; color: {color}'
+
+def cor_geral(val):
+    bg_color = '#92D050' if val != "NÃO CONFERE" else '#FFC7CE'
+    return f'background-color: {bg_color}'
 
 planilha = definir_colunas('Verde')
 
@@ -363,26 +374,27 @@ for arquivo in os.listdir(pasta):
     inserir_valores(planilha,valores)
 
 df = pd.DataFrame(data = planilha)
-df.style
 pd.set_option('display.max_colwidth', None)
 writer = pd.ExcelWriter(saida, engine="xlsxwriter")
 
+
+s = df.style.applymap(cor_geral).applymap(cor_bandeira,subset=pd.IndexSlice[:,['Bandeira Tarifária TIPO']]).set_properties(**{'text-align': 'center'}).set_properties(subset=['Data','VALOR TOTAL','VALOR CALCULADO'], **{'background-color': 'white'})
+
 df.to_excel(writer, sheet_name='Sheet1')
-
 workbook = writer.book
-worksheet = writer.sheets["Sheet1"]
+worksheet = writer.sheets['Sheet1']
 
+border_fmt = workbook.add_format({'bottom':1, 'top':1, 'left':1, 'right':1})
+worksheet.conditional_format(xlsxwriter.utility.xl_range(0, 0, len(df), len(df.columns)), {'type': 'no_errors', 'format': border_fmt})
 
-worksheet.set_column(1, 1, 18)
-
-worksheet.set_column(2, 2, None)
+s.to_excel(writer, sheet_name='Sheet1')
 
 writer.close()
 
 
-#Primeiramente, é preciso identificar se a unidade consumidora está sobre a tarifa verde ou azul;   Feito
+#Primeiramente, é preciso identificar se a unidade consumidora está sobre a tarifa verde ou azul;   FEITO
 #Em seguida, é preciso identificar se a unidade consumidora possui geração própria e energia (pode ser feito depois se for melhor);
 #Após determinar a classificação tarifária e se há geração própria, será montado o dicionário contendo as colunas respectivas (é preciso adicionar a coluna de "mês");
-#Será criada uma função para cada elemento a ser adicionado (ex: uma função para consumo na ponta, uma para consumo fora de ponta etc.);    Feito
+#Será criada uma função para cada elemento a ser adicionado (ex: uma função para consumo na ponta, uma para consumo fora de ponta etc.);    FEITO
 #Será criada uma função principal para atribuir os valores de cada coluna, nela vão estar presentes as condições (ex: se for azul adiciona a demanda na ponta e fora da ponta);
-#Depois vai ser necessário ajustar a formatação das células
+#Depois vai ser necessário ajustar a formatação das células;    FEITO
