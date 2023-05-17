@@ -1,3 +1,2 @@
 # Extracao-faturas
-Script para preenchimento de planilha com dados de faturas de energia
-É necessário que as faturas estejam separadas em uma pasta própria, de preferência ordenadas da data mais antiga até a mais recente
+Esse script tem como objetivo acelerar a coleta de dados de faturas de energia para a realização de uma análise tarifária. Os dados são separados de acordo com a planilha de referência utilizada na análise.
