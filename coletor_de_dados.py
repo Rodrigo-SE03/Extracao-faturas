@@ -78,43 +78,76 @@ def get_ultrapassagem(texto):
     ultra = [demanda_ultrapassagem,preco_demanda_ultrapassagem]
     return ultra
 
-def get_consumo_hp(texto,old):
-    if old:
+def get_consumo_hp(texto,old,gen):
+    if old and not gen:
         consumo_p = format_number(re.search(r'(CONSUMO P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)\n',texto).group(2))
         preco_consumo_p = format_number(re.search(r'(CONSUMO P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)\n',texto).group(3))
-    else:
+    elif not gen:
         consumo_p = format_number(re.search(r'(CONSUMO P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([.0-9,]+)\n',texto).group(2))
         preco_consumo_p = format_number(re.search(r'(CONSUMO P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([.0-9,]+)\n',texto).group(3))
+    else:
+        consumo_p = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([.0-9,]+)',texto).group(2))
+        preco_consumo_p = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([.0-9,]+)',texto).group(3))
     
-    parcela_te_p = format_number(re.search(r'(PARCELA TE P)[ ,\-A-Z,0-9%a-z]+[ ]([.,0-9]+)',texto).group(2))
+    if gen:
+        parcela_te_p = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA P - PARC.[\n -,\-])[ ,\-A-Z,0-9%a-z]+[ ][0-9,]{7}([.,0-9]+)',texto).group(2))
+    else:
+        parcela_te_p = format_number(re.search(r'(PARCELA TE P)[ ,\-A-Z,0-9%a-z]+[ ]([.,0-9]+)',texto).group(2))
     preco_consumo_p = preco_consumo_p + parcela_te_p
     con_hp = [consumo_p,preco_consumo_p]
     return con_hp
 
-def get_consumo_hfp(texto,old):
-    if old:
+def get_consumo_hfp(texto,old,gen):
+    if old and not gen:
         consumo_fp = format_number(re.search(r'(CONSUMO FP [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)\n',texto).group(2))
         preco_consumo_fp = format_number(re.search(r'(CONSUMO FP [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)\n',texto).group(3))
         consumo_r = format_number(re.search(r'(CONSUMO HR [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)\n',texto).group(2))
         preco_consumo_r = format_number(re.search(r'(CONSUMO HR [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)\n',texto).group(3))
-    else:
+    elif not gen:
         consumo_fp = format_number(re.search(r'(CONSUMO FP kWh )[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(2))
         preco_consumo_fp = format_number(re.search(r'(CONSUMO FP kWh )[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(3))
         consumo_r = format_number(re.search(r'(CONSUMO HR kWh )[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(2))
         preco_consumo_r = format_number(re.search(r'(CONSUMO HR kWh )[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(3))
     
-    parcela_te_fp = format_number(re.search(r'(PARCELA TE FP)[ ,\-A-Z,0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
-    parcela_te_r = format_number(re.search(r'(PARCELA TE HR)[ ,\-A-Z,0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+    else:
+        consumo_fp = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA FP [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([.0-9,]+)',texto).group(2))
+        preco_consumo_fp = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA FP [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([.0-9,]+)',texto).group(3))
+        consumo_r = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA HR [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(2))
+        preco_consumo_r = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA HR [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(3))
+    
+    if gen:
+        parcela_te_fp = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA FP - PARC.[\n -,\-])[ ,\-A-Z,0-9%a-z]+[ ][0-9,]{7}([.,0-9]+)',texto).group(2))
+        parcela_te_r = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA HR - PARC.[\n -,\-])[ ,\-A-Z,0-9%a-z]+[ ][0-9,]{7}([.,0-9]+)',texto).group(2))
+    else:
+        parcela_te_fp = format_number(re.search(r'(PARCELA TE FP)[ ,\-A-Z,0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+        parcela_te_r = format_number(re.search(r'(PARCELA TE HR)[ ,\-A-Z,0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
     preco_consumo_fp = preco_consumo_fp + parcela_te_fp + parcela_te_r + preco_consumo_r
     consumo_fp = consumo_fp + consumo_r
     con_hfp = [consumo_fp,preco_consumo_fp]
     return con_hfp
 
-def get_bandeiras(texto):
+def get_bandeiras(texto,gen):
     try:
-        bandeira_hr = format_number(re.search(r'(ADC BAND. VERMELHA TE HR )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
-        bandeira_hfp = format_number(re.search(r'(ADC BAND. VERMELHA TE FP )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
-        bandeira_hp = format_number(re.search(r'(ADC BAND. VERMELHA TE P )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+        if gen:
+            bandeira_hr = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN.[\n ]HR - PARC. )[ ,\-,A-Z,0-9,%,a-z]+[ ][0-9,]{6}[ ][0-9][,][0-9]{5}([0-9]+[.,\][0-9]+)',texto).group(2))
+            bandeira_hfp = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN.[\n ]FP - PARC. )[ ,\-,A-Z,0-9,%,a-z]+[ ][0-9,]{5}[ ][0-9][,][0-9]{5}([0-9]+[.,\][0-9]+)',texto).group(2))
+            bandeira_hp = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN.[\n ]P - PARC. )[ ,\-,A-Z,0-9,%,a-z]+[ ][0-9,]{6}[ ][0-9][,][0-9]{5}([0-9]+[.,\][0-9]+)',texto).group(2))
+            try:
+                bandeira_hr += format_number(re.search(r'(ADC BAND. VERMELHA INJET. HR TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+            except:
+                pass
+            try:
+                bandeira_hfp += format_number(re.search(r'(ADC BAND. VERMELHA INJET. FP TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+            except:
+                pass
+            try:
+                bandeira_hp += format_number(re.search(r'(ADC BAND. VERMELHA INJET. P TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+            except:
+                pass
+        else:
+            bandeira_hr = format_number(re.search(r'(ADC BAND. VERMELHA TE HR )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+            bandeira_hfp = format_number(re.search(r'(ADC BAND. VERMELHA TE FP )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+            bandeira_hp = format_number(re.search(r'(ADC BAND. VERMELHA TE P )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
 
         bandeiras_preco = bandeira_hfp + bandeira_hp + bandeira_hr
     except:
@@ -247,7 +280,7 @@ def get_compesacoes(texto):
     compesacoes = taxa + compensacao_dic_mensal + compensacao_fic_mensal + compensacao_dic_anual + compensacao_fic_anual + religacao + desligamento + debito
     return compesacoes
 
-def get_multas(texto):
+def get_multas(texto):  
     try:
         juros = format_number(re.search(r'(JUROS MORATÓRIA. )([\-0-9,]+)',texto).group(2))
         multa = format_number(re.search(r'(MULTA )[\- ][ 0-9\/.][0-9\/.]+[ ]([\-0-9,]+)',texto).group(2))
@@ -261,6 +294,13 @@ def get_multas(texto):
         dev_multa = (dev_juros + dev_multa)*-1
     except:
         dev_multa = 0
+
+    try:
+        dev_multa += format_number(re.search(r'(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9]+)',texto).group(3))
+        dev_multa += format_number(re.search(r'(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9]+)\n(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9]+)',texto).group(6))
+    except:
+        pass
+    
     
     multa = multa+dev_multa
     return multa
@@ -284,14 +324,21 @@ def definir_valor(texto):
     mes,ano = data
     if (mes == "JAN" and int(ano) == 2022) or (int(ano)<2022): isOld = True
     else: isOld = False
+    try:
+        re.search('(GERAÇÃO)',texto).group(1)
+        gen = True
+    except:
+        gen = False
+
+    if mes == "ABR":stop
     demanda_contratada = get_demanda_contratada(texto)
     demanda_P = get_demanda_hp(texto,isOld)
     demanda,preco_demanda = get_demanda_hfp(texto,isOld)
     demanda_ex,preco_demanda_ex = get_demanda_exd(texto,demanda,demanda_contratada)
     demanda_ultrapassagem,preco_demanda_ultrapassagem = get_ultrapassagem(texto)
-    consumo_hp,preco_consumo_hp = get_consumo_hp(texto,isOld)
-    consumo_hfp,preco_consumo_hfp = get_consumo_hfp(texto,isOld)
-    bandeiras_tipo,bandeiras = get_bandeiras(texto)
+    consumo_hp,preco_consumo_hp = get_consumo_hp(texto,isOld,gen)
+    consumo_hfp,preco_consumo_hfp = get_consumo_hfp(texto,isOld,gen)
+    bandeiras_tipo,bandeiras = get_bandeiras(texto,gen)
     consumo_reativa,preco_reativa = get_energia_reativa(texto,isOld)
     dem_reativa,preco_dem_reativa = get_dem_reativa(texto)
     ilum = get_ilum(texto)
@@ -301,7 +348,7 @@ def definir_valor(texto):
     precos = [preco_demanda,preco_demanda_ex,preco_demanda_ultrapassagem,preco_consumo_hp,preco_consumo_hfp,bandeiras,preco_reativa,preco_dem_reativa,ilum,valor_extra,multa]
     preco_calculado,flag_confere = conferir(precos,preco_total)
     data = f'{mes}/{ano}'
-
+    
     maior_que = demanda_P if demanda_P>demanda else demanda
 
     valores = [data,demanda_P,demanda,preco_demanda,maior_que,demanda_ex,preco_demanda_ex,demanda_ultrapassagem,preco_demanda_ultrapassagem,consumo_hp,preco_consumo_hp,consumo_hfp,preco_consumo_hfp,bandeiras_tipo,bandeiras,consumo_reativa,preco_reativa,dem_reativa,preco_dem_reativa,ilum,valor_extra,multa,icms,pasep,cofins,preco_total,preco_calculado,flag_confere]
@@ -368,7 +415,7 @@ for arquivo in os.listdir(pasta):
     reader = PdfReader(fatura)           #para teste individual, inserir o nome do arquivo aqui, para gerar o total coloque    fatura
     page = reader.pages[0]
     texto = page.extract_text()
-    #print(texto)
+    print(texto)
 
     valores = definir_valor(texto)
     inserir_valores(planilha,valores)
