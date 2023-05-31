@@ -15,7 +15,7 @@ layout = [[sg.Text('Selecione a pasta com as faturas')],
           [sg.Text('Nome', size=(8, 1)), sg.Input()],
           [sg.Submit(), sg.Cancel()]]
 
-window = sg.Window('File Compare', layout)
+window = sg.Window('Coleta de dados', layout)
 
 
 event, values = window.read()
@@ -126,22 +126,28 @@ def get_consumo_hfp(texto,old,gen):
     con_hfp = [consumo_fp,preco_consumo_fp]
     return con_hfp
 
-def get_bandeiras(texto,gen):
+def get_bandeiras(texto,gen,fail=3):
+    bandeira_hr = 0
+    bandeira_hfp = 0
+    bandeira_hp = 0
     try:
         if gen:
-            bandeira_hr = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN.[\n ]HR - PARC. )[ ,\-,A-Z,0-9,%,a-z]+[ ][0-9,]{6}[ ][0-9][,][0-9]{5}([0-9]+[.,\][0-9]+)',texto).group(2))
-            bandeira_hfp = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN.[\n ]FP - PARC. )[ ,\-,A-Z,0-9,%,a-z]+[ ][0-9,]{5}[ ][0-9][,][0-9]{5}([0-9]+[.,\][0-9]+)',texto).group(2))
-            bandeira_hp = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN.[\n ]P - PARC. )[ ,\-,A-Z,0-9,%,a-z]+[ ][0-9,]{6}[ ][0-9][,][0-9]{5}([0-9]+[.,\][0-9]+)',texto).group(2))
             try:
-                bandeira_hr += format_number(re.search(r'(ADC BAND. VERMELHA INJET. HR TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+                bandeira_hr = format_number(re.search('(AD. BAND. VERMELHA EN. ATIVA FORN.[\\n ]HR - PARC. )([ ,\\-,A-Z,0-9,%%,a-z]+[ ][0-9,]){6}[,][0-9]{%d}([0-9]+[.,\\][0-9]+)'%(fail),texto).group(3))
+                bandeira_hfp = format_number(re.search('(AD. BAND. VERMELHA EN. ATIVA FORN.[\\n ]FP - PARC. )([ ,\\-,A-Z,0-9,%%,a-z]+[ ][0-9,]){6}[,][0-9]{%d}([0-9]+[.,\\][0-9]+)'%(fail),texto).group(3))
+                bandeira_hp = format_number(re.search('(AD. BAND. VERMELHA EN. ATIVA FORN.[\\n ]P - PARC. )([ ,\\-,A-Z,0-9,%%,a-z]+[ ][0-9,]){6}[,][0-9]{%d}([0-9]+[.,\\][0-9]+)'%(fail),texto).group(3))
             except:
                 pass
             try:
-                bandeira_hfp += format_number(re.search(r'(ADC BAND. VERMELHA INJET. FP TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+                bandeira_hr += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. HR TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
             except:
                 pass
             try:
-                bandeira_hp += format_number(re.search(r'(ADC BAND. VERMELHA INJET. P TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+                bandeira_hfp += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. FP TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+            except:
+                pass
+            try:
+                bandeira_hp += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. P TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
             except:
                 pass
         else:
@@ -156,6 +162,7 @@ def get_bandeiras(texto,gen):
         bandeiras_tipo = 'VERMELHA'
     else:
         bandeiras_tipo = 'VERDE'
+
     bandeiras = [bandeiras_tipo,bandeiras_preco]
     return bandeiras
 
@@ -296,8 +303,20 @@ def get_multas(texto):
         dev_multa = 0
 
     try:
-        dev_multa += format_number(re.search(r'(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9]+)',texto).group(3))
-        dev_multa += format_number(re.search(r'(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9]+)\n(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9]+)',texto).group(6))
+        dev_multa += format_number(re.search(r'(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)',texto).group(3))
+        dev_multa += format_number(re.search(r'(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)\n(ENERGIA INJETADA FP kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)',texto).group(6))
+    except:
+        pass
+
+    try:
+        dev_multa += format_number(re.search(r'(ENERGIA INJETADA HR kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)',texto).group(3))
+        dev_multa += format_number(re.search(r'(ENERGIA INJETADA HR kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)\n(ENERGIA INJETADA HR kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)',texto).group(6))
+    except:
+        pass
+
+    try:
+        dev_multa += format_number(re.search(r'(ENERGIA INJETADA P kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)',texto).group(3))
+        dev_multa += format_number(re.search(r'(ENERGIA INJETADA P kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)\n(ENERGIA INJETADA P kWh )([0-9,%\-]+[ ]){7}([\-,0-9.]+)',texto).group(6))
     except:
         pass
     
@@ -330,7 +349,6 @@ def definir_valor(texto):
     except:
         gen = False
 
-    if mes == "ABR":stop
     demanda_contratada = get_demanda_contratada(texto)
     demanda_P = get_demanda_hp(texto,isOld)
     demanda,preco_demanda = get_demanda_hfp(texto,isOld)
@@ -347,6 +365,13 @@ def definir_valor(texto):
     icms,pasep,cofins = get_impostos(texto)
     precos = [preco_demanda,preco_demanda_ex,preco_demanda_ultrapassagem,preco_consumo_hp,preco_consumo_hfp,bandeiras,preco_reativa,preco_dem_reativa,ilum,valor_extra,multa]
     preco_calculado,flag_confere = conferir(precos,preco_total)
+    fails = 3
+    while flag_confere == "NÃO CONFERE" and gen and fails<7:
+        bandeiras_tipo,bandeiras = get_bandeiras(texto,gen,fails)
+        precos = [preco_demanda,preco_demanda_ex,preco_demanda_ultrapassagem,preco_consumo_hp,preco_consumo_hfp,bandeiras,preco_reativa,preco_dem_reativa,ilum,valor_extra,multa]
+        preco_calculado,flag_confere = conferir(precos,preco_total)
+        fails+=1
+
     data = f'{mes}/{ano}'
     
     maior_que = demanda_P if demanda_P>demanda else demanda
@@ -415,7 +440,7 @@ for arquivo in os.listdir(pasta):
     reader = PdfReader(fatura)           #para teste individual, inserir o nome do arquivo aqui, para gerar o total coloque    fatura
     page = reader.pages[0]
     texto = page.extract_text()
-    print(texto)
+    #print(texto)
 
     valores = definir_valor(texto)
     inserir_valores(planilha,valores)
@@ -439,9 +464,6 @@ s.to_excel(writer, sheet_name='Sheet1')
 writer.close()
 
 
-#Primeiramente, é preciso identificar se a unidade consumidora está sobre a tarifa verde ou azul;   FEITO
-#Em seguida, é preciso identificar se a unidade consumidora possui geração própria e energia (pode ser feito depois se for melhor);
+
 #Após determinar a classificação tarifária e se há geração própria, será montado o dicionário contendo as colunas respectivas (é preciso adicionar a coluna de "mês");
-#Será criada uma função para cada elemento a ser adicionado (ex: uma função para consumo na ponta, uma para consumo fora de ponta etc.);    FEITO
 #Será criada uma função principal para atribuir os valores de cada coluna, nela vão estar presentes as condições (ex: se for azul adiciona a demanda na ponta e fora da ponta);
-#Depois vai ser necessário ajustar a formatação das células;    FEITO
