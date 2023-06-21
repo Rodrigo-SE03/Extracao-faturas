@@ -133,7 +133,3 @@ s.to_excel(writer, sheet_name='Sheet1')
 
 writer.close()
 #-----------------------------------------------------------------------------------------------------------------------------------
-
-
-#Após determinar a classificação tarifária e se há geração própria, será montado o dicionário contendo as colunas respectivas (é preciso adicionar a coluna de "mês");
-#Será criada uma função principal para atribuir os valores de cada coluna, nela vão estar presentes as condições (ex: se for azul adiciona a demanda na ponta e fora da ponta);
