@@ -1,29 +1,81 @@
 import re
+from PyPDF2 import PdfReader
+import os
+
+def get_texto(fatura):
+    """
+    Retorna o texto contido na fatura
+    """
+    reader = PdfReader(fatura)           
+    page = reader.pages[0]
+    texto = page.extract_text()
+
+    return texto
+
+def get_classificacao(pasta):
+    """
+    Identifica a classificação tarifária da fatura (verde ou azul)
+    """
+    fatura = os.path.join(pasta,os.listdir(pasta)[0])
+    reader = PdfReader(fatura)           
+    page = reader.pages[0]
+    texto = page.extract_text()
+    classificacao = "Azul"  if re.search(r'(THS_VERDE)',texto) is None else "Verde"
+    return classificacao
+
+def get_gen(texto):
+    """
+    Verifica se a UC possui geração própria de energia
+    """
+    try:
+        re.search('(GERAÇÃO)',texto).group(1)
+        gen = True
+    except:
+        gen = False
+    return gen
 
 def format_number(num):
+    """
+    Converte o número extraído como string para um float
+    """
     num = num.replace('.','')
     num = num.replace(',','.')
     return float(num)
 
 def get_data(texto):
+    """
+    Retorna uma lista com a data da fatura [mês, ano]
+    """
     mes,ano = re.search('([A-Z]{3})[\/]([0-9]{4})',texto).groups()
     data = [mes,ano]
     return data
 
 def get_demanda_contratada(texto):
+    """
+    Retorna a demanda contratada em kW
+    """
     return format_number(re.search(r'(DEMANDA \- kW )([0-9]+)\n',texto).group(2))
 
 def get_demanda_hp(texto):
+    """
+    Retorna a demanda no horário de ponta
+    """
     demanda_P = format_number(re.search(r'(DEMANDA \- KW )[\-,A-Z0-9a-z]+[ ]([0-9,.]+)',texto).group(2))
     return demanda_P
 
 def get_demanda_hfp(texto):
+    """
+    Retorna uma lista com a demanda fora do horário de ponta e o valor pago pela demanda na fatura [demanda fora de ponta, valor pago]
+    """
     preco_demanda = format_number(re.search(r'(DEMANDA kW )([,\-A-Z0-9%a-z]+[ ]){7}([0-9]+[.,][,0-9]+)\n',texto).group(3))
     demanda = format_number(re.search(r'(DEMANDA )[\-A-Z,0-9]+[ ][\-A-Z,0-9]+[ ][\-A-Z,0-9]+[ ]([1-9][0-9,.]+)[ \-A-Z,0-9]+(FORA PONTA)',texto).group(2))
     dem = [demanda,preco_demanda]
     return dem
 
 def get_demanda_exd(texto,demanda,demanda_contratada):
+    """
+    Retorna uma lista com a demanda excedente e o valor pago pelo excedente [demanda excedente, valor pago]
+    """
     demanda_exd = demanda_contratada - demanda
     if demanda_exd<=0:
         demanda_exd = 0
@@ -37,9 +89,12 @@ def get_demanda_exd(texto,demanda,demanda_contratada):
     return dem_exd
 
 def get_ultrapassagem(texto):
+    """
+    Retorna uma lista com a demanda de ultrapassagem e o valor pago pela ultrapassagem na fatura [demanda de ultrapassagem, valor pago]
+    """
     try:
-        demanda_ultrapassagem = format_number(re.search(r'(DEMANDA ULTRAPASSAGEM )([,\-,A-Z,0-9,%,a-z]+[ ]){2}([0-9]{1,}[,][0-9]+)([,\-,A-Z,0-9,%,a-z]+[ ]){6}([0-9,.]+)',texto).group(3))
-        preco_demanda_ultrapassagem = format_number(re.search(r'(DEMANDA ULTRAPASSAGEM )([,\-,A-Z,0-9,%,a-z]+[ ]){2}([0-9]{1,}[,][0-9]+)([,\-,A-Z,0-9,%,a-z]+[ ]){6}([0-9,.]+)',texto).group(5))
+        demanda_ultrapassagem = format_number(re.search(r'(DEMANDA ULTRAPASSAGEM )([\-,A-Z0-9%a-z]+[ ]){2}([0-9]{1,}[,][0-9]+)([,\-A-Z0-9%a-z]+[ ]){6}([0-9,.]+)',texto).group(3))
+        preco_demanda_ultrapassagem = format_number(re.search(r'(DEMANDA ULTRAPASSAGEM )([,\-A-Z0-9%a-z]+[ ]){2}([0-9]{1,}[,][0-9]+)([,\-A-Z0-9%a-z]+[ ]){6}([0-9,.]+)',texto).group(5))
     except:
         demanda_ultrapassagem=0
         preco_demanda_ultrapassagem=0
@@ -47,6 +102,9 @@ def get_ultrapassagem(texto):
     return ultra
 
 def get_consumo_hp(texto,gen):
+    """
+    Retorna uma lista com o consumo em kWh no horário de ponta e o valor pago (TUSD + TE) [consumo P, valor pago]
+    """
     if gen:
         consumo_p = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[0-9 ,%]+[ ]([0-9.,]+)\n',texto).group(2))
         preco_consumo_p = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[0-9 ,%]+[ ]([0-9.,]+)\n',texto).group(3))
@@ -54,59 +112,65 @@ def get_consumo_hp(texto,gen):
     else:
         consumo_p = format_number(re.search(r'(CONSUMO P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([.0-9,]+)\n',texto).group(2))
         preco_consumo_p = format_number(re.search(r'(CONSUMO P [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([.0-9,]+)\n',texto).group(3))
-        parcela_te_p = format_number(re.search(r'(PARCELA TE P)[ ,\-A-Z,0-9%a-z]+[ ]([.,0-9]+)',texto).group(2))
+        parcela_te_p = format_number(re.search(r'(PARCELA TE P)[ ,\-A-Z0-9%a-z]+[ ]([.,0-9]+)',texto).group(2))
     preco_consumo_p = preco_consumo_p + parcela_te_p
     con_hp = [consumo_p,preco_consumo_p]
     return con_hp
 
 def get_consumo_hfp(texto,gen):
+    """
+    Retorna uma lista com o consumo em kWh no horário fora de ponta e horário reservado e o valor pago (TUSD + TE) [consumo FP, valor pago]
+    """
     if gen:
         consumo_fp = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA FP [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)',texto).group(2))
         preco_consumo_fp = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA FP [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)',texto).group(3))
         consumo_r = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA HR [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)',texto).group(2))
         preco_consumo_r = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA HR [ \-a-zA-Z]+)[0-9,]+[ ]([.0-9,]+)[ ]([.0-9,]+)',texto).group(3))
-        parcela_te_fp = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA FP - PARC.[\n -,\-])[ ,\-A-Z,0-9%a-z]+[ ]([.,0-9]+)\n',texto).group(2))
-        parcela_te_r = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA HR - PARC.[\n -,\-])[ ,\-A-Z,0-9%a-z]+[ ]([.,0-9]+)\n',texto).group(2))
+        parcela_te_fp = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA FP - PARC.[\n -,\-])[ ,\-A-Z0-9%a-z]+[ ]([.,0-9]+)\n',texto).group(2))
+        parcela_te_r = format_number(re.search(r'(ENERGIA ATIVA FORNECIDA HR - PARC.[\n -,\-])[ ,\-A-Z0-9%a-z]+[ ]([.,0-9]+)\n',texto).group(2))
     else:
         consumo_fp = format_number(re.search(r'(CONSUMO FP kWh )[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(2))
         preco_consumo_fp = format_number(re.search(r'(CONSUMO FP kWh )[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(3))
         consumo_r = format_number(re.search(r'(CONSUMO HR kWh )[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(2))
         preco_consumo_r = format_number(re.search(r'(CONSUMO HR kWh )[0-9,]+[ ]([.0-9,]+)[ ][ 0-9,%]+[ ]([0-9][.,\][0-9,\,]+)\n',texto).group(3))
-        parcela_te_fp = format_number(re.search(r'(PARCELA TE FP)[ ,\-A-Z,0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
-        parcela_te_r = format_number(re.search(r'(PARCELA TE HR)[ ,\-A-Z,0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+        parcela_te_fp = format_number(re.search(r'(PARCELA TE FP)[ ,\-A-Z0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+        parcela_te_r = format_number(re.search(r'(PARCELA TE HR)[ ,\-A-Z0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
     preco_consumo_fp = preco_consumo_fp + parcela_te_fp + parcela_te_r + preco_consumo_r
     consumo_fp = consumo_fp + consumo_r
     con_hfp = [consumo_fp,preco_consumo_fp]
     return con_hfp
 
-def get_bandeiras(texto,gen,fail=3):
+def get_bandeiras(texto,gen):
+    """
+    Retorna uma lista com o tipo da bandeira (vermelha/verde) e o valor pago total na fatura [tipo da bandeira, valor pago]
+    """
     bandeira_hr = 0
     bandeira_hfp = 0
     bandeira_hp = 0
     try:
         if gen:
             try:
-                bandeira_hr = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN. HR - PARC. )([ ,\-,A-Z,0-9,%,a-z]+[ ]){2}([0-9,.]+)',texto).group(3))
-                bandeira_hfp = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN. FP - PARC. )([ ,\-,A-Z,0-9,%,a-z]+[ ]){2}([0-9,.]+)',texto).group(3))
-                bandeira_hp = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN. P - PARC. )([ ,\-,A-Z,0-9,%,a-z]+[ ]){2}([0-9,.]+)',texto).group(3))
+                bandeira_hr = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN. HR - PARC. )([ ,\-A-Z0-9%a-z]+[ ]){2}([0-9,.]+)',texto).group(3))
+                bandeira_hfp = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN. FP - PARC. )([ ,\-A-Z0-9%a-z]+[ ]){2}([0-9,.]+)',texto).group(3))
+                bandeira_hp = format_number(re.search(r'(AD. BAND. VERMELHA EN. ATIVA FORN. P - PARC. )([ ,\-A-Z0-9%a-z]+[ ]){2}([0-9,.]+)',texto).group(3))
             except:
                 pass
             try:
-                bandeira_hr += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. HR TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+                bandeira_hr += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. HR TE )[ ,\-A-Z0-9%a-z]+[ ]([0-9.,\-]+)',texto).group(2))
             except:
                 pass
             try:
-                bandeira_hfp += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. FP TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+                bandeira_hfp += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. FP TE )[ ,\-A-Z0-9%a-z]+[ ]([0-9.,\-]+)',texto).group(2))
             except:
                 pass
             try:
-                bandeira_hp += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. P TE )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9.,\-]+)',texto).group(2))
+                bandeira_hp += format_number(re.search(r'(ADC BAND. VERMELHA[ ]+INJET. P TE )[ ,\-A-Z0-9%a-z]+[ ]([0-9.,\-]+)',texto).group(2))
             except:
                 pass
         else:
-            bandeira_hr = format_number(re.search(r'(ADC BAND. VERMELHA TE HR )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
-            bandeira_hfp = format_number(re.search(r'(ADC BAND. VERMELHA TE FP )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
-            bandeira_hp = format_number(re.search(r'(ADC BAND. VERMELHA TE P )[ ,\-,A-Z,0-9,%,a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+            bandeira_hr = format_number(re.search(r'(ADC BAND. VERMELHA TE HR )[ ,\-A-Z0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+            bandeira_hfp = format_number(re.search(r'(ADC BAND. VERMELHA TE FP )[ ,\-A-Z0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
+            bandeira_hp = format_number(re.search(r'(ADC BAND. VERMELHA TE P )[ ,\-A-Z0-9%a-z]+[ ]([0-9]+[.,\][0-9]+)',texto).group(2))
 
         bandeiras_preco = bandeira_hfp + bandeira_hp + bandeira_hr
     except:
@@ -120,6 +184,9 @@ def get_bandeiras(texto,gen,fail=3):
     return bandeiras
 
 def get_energia_reativa(texto):
+    """
+    Retorna uma lista com o valor medido de energia reativa (UFER) e o valor pago com a energia reativa na fatura [ufer, valor pago]
+    """
     try:
         ufer_p = re.search(r'(UFER P )([\-A-Z0-9%,a-z]+[ ]){2}([0-9,.]+)([\-A-Z0-9%,a-z]+[ ]){6}([0-9,.]+)',texto)
         preco_ufer_p = format_number(ufer_p.group(5))
@@ -150,6 +217,9 @@ def get_energia_reativa(texto):
     return energia_reativa
 
 def get_dem_reativa(texto):
+    """
+    Retorna uma lista com o valor medido de demanda de energia reativa (UFER) e o valor pago com a demanda energia reativa na fatura [dmcr, valor pago]
+    """
     try:
         dem_reativa_p = format_number(re.search(r'(DMCR [a-zA-Z0-9]+)[ ]([0-9,.]+)[ ][0-9., ]+(PONTA)',texto).group(2))
     except:
@@ -173,10 +243,16 @@ def get_dem_reativa(texto):
     return demanda_reativa
 
 def get_ilum(texto):
-    ilum = format_number(re.search(r'(ILUM)[ ,.,A-Z,a-z,Ú,\-]+([0-9]+[.,\][0-9]+)',texto).group(2))
+    """
+    Retorna o valor pago com a iluminação pública na fatura
+    """
+    ilum = format_number(re.search(r'(ILUM)[ .,A-Za-zÚ\-]+([0-9]+[.,\][0-9]+)',texto).group(2))
     return ilum
 
 def get_impostos(texto):
+    """
+    Retorna uma lista com os valores dos impostos (ICMS, PIS/PASEP e COFINS) [icms, pasep, cofins]
+    """
     pasep = format_number(re.search(r'(PIS\/PASEP )[0-9,% ]+[ ]([0-9,]+)',texto).group(2))
     cofins = format_number(re.search(r'(COFINS)[0-9,% ]+[ ]([0-9,]+)',texto).group(2))
     icms = format_number(re.search(r'(ICMS )[^0][0-9,% ]+[ ]([0-9,]+)',texto).group(2))
@@ -184,6 +260,10 @@ def get_impostos(texto):
     return impostos
 
 def get_compesacoes(texto):
+    """
+    Retorna a soma dos valores das compensações contidas na fatura \n
+    Deve ser sempre conferido
+    """
     try:
         taxa = format_number(re.search('(TAXA END\. ALTERNATIVO )([0-9,]+)',texto).group(2))
     except:
@@ -227,7 +307,11 @@ def get_compesacoes(texto):
     compesacoes = taxa + compensacao_dic_mensal + compensacao_fic_mensal + compensacao_dic_anual + compensacao_fic_anual + religacao + desligamento + debito
     return compesacoes
 
-def get_multas(texto):  
+def get_multas(texto): 
+    """
+    Retorna a soma das multas contidas nas faturas \n
+    Deve ser sempre conferido
+    """
     try:
         juros = format_number(re.search(r'(JUROS MORATÓRIA. )([\-0-9,]+)',texto).group(2))
         multa = format_number(re.search(r'(MULTA )[\- ][ 0-9\/.][0-9\/.]+[ ]([\-0-9,]+)',texto).group(2))
@@ -263,3 +347,20 @@ def get_multas(texto):
     
     multa = multa+dev_multa
     return multa
+
+def conferir(precos,texto):
+    """
+    Verifica se a soma dos valores coletados está de acordo com o custo total da fatura \n
+    Retorna uma lista com a soma dos valores coletados, o valor total lido na fatura e uma flag para identificar se está de acordo ou não [valor calculado, valor total, flag]
+    """
+    preco_total = format_number(re.search('(R\$)[\*]+([0-9,.]+)',texto).group(2))
+    preco_calculado = 0 
+    for preco in precos:
+        preco_calculado += preco
+    if (preco_calculado >= preco_total-0.05) and (preco_calculado <= preco_total+0.05):
+        flag_confere = 'CONFERE'
+    else:
+        flag_confere = 'NÃO CONFERE'
+        print("erro")
+    conferir = [preco_calculado,preco_total,flag_confere]
+    return conferir
