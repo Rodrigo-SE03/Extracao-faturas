@@ -247,7 +247,11 @@ def get_ilum(texto):
     """
     Retorna o valor pago com a iluminação pública na fatura
     """
-    ilum = format_number(re.search(r'(ILUM)[ .,A-Za-zÚ\-]+([0-9]+[.,\][0-9]+)',texto).group(2))
+    if re.search(r'(ILUM)[ .,A-Za-zÚ\-]+([0-9]+[.,\][0-9]+)',texto) != None:
+        ilum = format_number(re.search(r'(ILUM)[ .,A-Za-zÚ\-]+([0-9]+[.,\][0-9]+)',texto).group(2))
+    else:
+        ilum = 0
+    
     return ilum
 
 def get_impostos(texto):
@@ -313,16 +317,23 @@ def get_multas(texto):
     Retorna a soma das multas contidas nas faturas \n
     Deve ser sempre conferido
     """
-    if re.search(r'(JUROS MORATÓRIA. )([\-0-9,]+)',texto) != None:
-        juros = format_number(re.search(r'(JUROS MORATÓRIA. )([\-0-9,]+)',texto).group(2))
-        multa = format_number(re.search(r'(MULTA )[\- ][ 0-9\/.][0-9\/.]+[ ]([\-0-9,]+)',texto).group(2))
+    multa = 0
+    dev_multa = 0
+    if re.search(r'(JUROS MORATÓRIA. )([\-0-9,.]+)',texto) != None:
+        juros = format_number(re.search(r'(JUROS MORATÓRIA. )([\-0-9,.]+)',texto).group(2))
+        multa = format_number(re.search(r'(MULTA )[\- ][ 0-9\/.][0-9\/.]+[ ]([\-0-9,.]+)',texto).group(2))
         multa = juros + multa
     else:
         multa = 0
+    
+    if re.search(r'(VAL[A-Z ÇÃ.]+)([\-0-9,.]+)',texto) != None:
+        multa += format_number(re.search(r'(VALOR [A-Z ÇÃ.]+)([\-0-9,.]+)',texto).group(2))
+    else:
+        pass
 
-    if re.search(r'(DEV\. JUROS PG INDEVIDO )[ \-]([\-0-9,]+)',texto) != None:
-        dev_juros = format_number(re.search(r'(DEV\. JUROS PG INDEVIDO )[ \-]([\-0-9,]+)',texto).group(2))
-        dev_multa = format_number(re.search(r'(DEV\. MULTA PG\. INDEVIDA )[ \-()]+([\-0-9,]+)',texto).group(2))
+    if re.search(r'(DEV\. JUROS PG INDEVIDO )[ \-]([\-0-9,.]+)',texto) != None:
+        dev_juros = format_number(re.search(r'(DEV\. JUROS PG INDEVIDO )[ \-]([\-0-9,.]+)',texto).group(2))
+        dev_multa = format_number(re.search(r'(DEV\. MULTA PG\. INDEVIDA )[ \-()]+([\-0-9,.]+)',texto).group(2))
         dev_multa = (dev_juros + dev_multa)*-1
     else:
         dev_multa = 0
