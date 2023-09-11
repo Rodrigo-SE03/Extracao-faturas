@@ -11,7 +11,7 @@ def format_number(num):
     num = num.replace(',','.')
     return float(num)
 
-reader = PdfReader('2023-07 - Mineiros.pdf') 
+reader = PdfReader('23-04.pdf') 
 text = reader.pages[0].extract_text() 
 print(text) 
 #print(get_bandeiras(text,True)) 

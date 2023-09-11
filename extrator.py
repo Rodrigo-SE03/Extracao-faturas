@@ -321,7 +321,7 @@ def get_multas(texto):
     dev_multa = 0
     if re.search(r'(JUROS MORATÓRIA. )([\-0-9,.]+)',texto) != None:
         juros = format_number(re.search(r'(JUROS MORATÓRIA. )([\-0-9,.]+)',texto).group(2))
-        multa = format_number(re.search(r'(MULTA )[\- ][ 0-9\/.][0-9\/.]+[ ]([\-0-9,.]+)',texto).group(2))
+        multa = format_number(re.search(r'(MULTA[ (S)]+)[\- ][A-Z 0-9\/.ÇÃ-]+[0-9\/.]+[ ]([\-0-9,.]+)',texto).group(2))
         multa = juros + multa
     else:
         multa = 0
